@@ -43,6 +43,7 @@
 let recognition;
 let timer;
 let timeRemaining;
+let recordingActive = false;
 let countdownEl = document.getElementById("countdown");
 let transcriptEl = document.getElementById("transcript");
 
@@ -77,15 +78,19 @@ function initRecognition() {
   };
 
   recognition.onend = () => {
-    if (timeRemaining > 0) recognition.start();
-  };
+  // Only restart recognition if we are still in an active recording session.
+  if (recordingActive && timeRemaining > 0) {
+    recognition.start();
+  }
+};
 }
 
 document.querySelectorAll("[data-time]").forEach(btn => {
   btn.onclick = () => {
     transcriptEl.textContent = "";
     timeRemaining = parseInt(btn.dataset.time);
-    recognition.start();
+    recordingActive = true;
+recognition.start();
     document.getElementById("stop").disabled = false;
     timer = setInterval(() => {
       timeRemaining--;
@@ -101,6 +106,7 @@ function stopRecording() {
   clearInterval(timer);
   countdownEl.textContent = "";
   document.getElementById("stop").disabled = true;
+  recordingActive = false;
   recognition.stop();
 }
 
