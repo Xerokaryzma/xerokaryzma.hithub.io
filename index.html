@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Speech Recorder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 20px; }
+    button { padding: 10px 14px; margin: 5px; border-radius: 8px; border: 1px solid #ccc; cursor: pointer; }
+    button.primary { background: #1a73e8; color: white; border: none; }
+    button.stop { background: #fce8e6; border: 1px solid #f28b82; }
+    #transcript { margin-top: 20px; padding: 15px; border: 1px dashed #ccc; border-radius: 8px; min-height: 120px; white-space: pre-wrap; }
+    #countdown { font-weight: bold; margin-left: 10px; }
+  </style>
+</head>
+<body>
+
+<h2>Record & Transcribe</h2>
+
+<button id="enable" class="primary">Enable Microphone</button>
+
+<div id="controls" style="display:none;">
+  <div>
+    <button data-time="120">2:00</button>
+    <button data-time="60">1:00</button>
+    <button data-time="30">0:30</button>
+    <button data-time="20">0:20</button>
+    <button data-time="10">0:10</button>
+    <button data-time="5">0:05</button>
+    <span id="countdown"></span>
+  </div>
+  <button id="stop" class="stop" disabled>Stop</button>
+</div>
+
+<div id="transcript">Transcript will appear here...</div>
+
+<div style="margin-top:15px;">
+  <button id="copy">Copy Transcript</button>
+  <button id="clear">Clear</button>
+</div>
+
+<script>
+let recognition;
+let timer;
+let timeRemaining;
+let countdownEl = document.getElementById("countdown");
+let transcriptEl = document.getElementById("transcript");
+
+document.getElementById("enable").onclick = async () => {
+  try {
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+    initRecognition();
+    document.getElementById("enable").style.display = "none";
+    document.getElementById("controls").style.display = "block";
+  } catch (e) {
+    alert("Microphone access denied.");
+  }
+};
+
+function initRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Speech recognition not supported in this browser.");
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = "en-US";
+
+  recognition.onresult = (event) => {
+    let text = "";
+    for (let i = 0; i < event.results.length; i++) {
+      text += event.results[i][0].transcript;
+    }
+    transcriptEl.textContent = text;
+  };
+
+  recognition.onend = () => {
+    if (timeRemaining > 0) recognition.start();
+  };
+}
+
+document.querySelectorAll("[data-time]").forEach(btn => {
+  btn.onclick = () => {
+    transcriptEl.textContent = "";
+    timeRemaining = parseInt(btn.dataset.time);
+    recognition.start();
+    document.getElementById("stop").disabled = false;
+    timer = setInterval(() => {
+      timeRemaining--;
+      let min = Math.floor(timeRemaining / 60).toString().padStart(2, "0");
+      let sec = (timeRemaining % 60).toString().padStart(2, "0");
+      countdownEl.textContent = min + ":" + sec;
+      if (timeRemaining <= 0) stopRecording();
+    }, 1000);
+  };
+});
+
+function stopRecording() {
+  clearInterval(timer);
+  countdownEl.textContent = "";
+  document.getElementById("stop").disabled = true;
+  recognition.stop();
+}
+
+document.getElementById("stop").onclick = stopRecording;
+
+document.getElementById("copy").onclick = async () => {
+  await navigator.clipboard.writeText(transcriptEl.textContent);
+  alert("Transcript copied.");
+};
+
+document.getElementById("clear").onclick = () => {
+  transcriptEl.textContent = "Transcript will appear here...";
+};
+</script>
+
+</body>
+</html>
