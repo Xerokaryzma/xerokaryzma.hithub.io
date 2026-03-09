@@ -67,15 +67,28 @@ function initRecognition() {
   recognition = new SpeechRecognition();
   recognition.continuous = true;
   recognition.interimResults = true;
-  recognition.lang = "es-MX";
+  // set Spanish variant — try "es-MX" first (Latin America).
+recognition.lang = "es-MX";
+// other improvements
+recognition.interimResults = true;
+recognition.maxAlternatives = 1;
 
   recognition.onresult = (event) => {
-    let text = "";
-    for (let i = 0; i < event.results.length; i++) {
-      text += event.results[i][0].transcript;
+  // Build final + interim text so partial English-ish interim results don't stay visible.
+  let finalTranscript = '';
+  let interimTranscript = '';
+  for (let i = 0; i < event.results.length; i++) {
+    const res = event.results[i];
+    const text = res[0].transcript.trim();
+    if (res.isFinal) {
+      finalTranscript += (finalTranscript ? '\n' : '') + text;
+    } else {
+      interimTranscript += (interimTranscript ? ' ' : '') + text;
     }
-    transcriptEl.textContent = text;
-  };
+  }
+  // Show final + interim (interim in same line). This reduces weird English partials staying in the box.
+  transcriptEl.textContent = (finalTranscript ? finalTranscript + (interimTranscript ? '\n' + interimTranscript : '') : interimTranscript);
+};
 
   recognition.onend = () => {
   // Only restart recognition if we are still in an active recording session.
